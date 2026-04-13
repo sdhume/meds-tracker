@@ -1,0 +1,1080 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Kulfi Meds - Medication Tracker for Pets">
+    <title>Kulfi Meds - Medication Tracker</title>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+    <style>
+        :root {
+            --bg-color: #F5F6F4;
+            --card-bg: #FFFFFF;
+            --text-dark: #2C2C2E;
+            --text-light: #8E8E93;
+            --green-accent: #7C9A7D;
+            --green-light: rgba(124, 154, 125, 0.05);
+            --green-border: rgba(124, 154, 125, 0.3);
+            --blue-accent: #8B9DC3;
+            --blue-light: rgba(139, 157, 195, 0.3);
+            --button-bg: #E8EBE6;
+            --alert-red: #FF3B30;
+            --alert-amber: #FF9500;
+            --shadow: 0px 1px 3px 0px rgba(0,0,0,0.1), 0px 1px 2px 0px rgba(0,0,0,0.06);
+            --shadow-hover: 0px 4px 6px -1px rgba(0, 0, 0, 0.1), 0px 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: #E2E4E0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: var(--text-dark);
+        }
+
+        /* Main Container (Card style on desktop, full screen on mobile) */
+        .mobile-container {
+            width: 100%;
+            max-width: 450px;
+            height: auto;
+            max-height: 90vh;
+            background-color: var(--bg-color);
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .scroll-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+            padding-top: 48px; /* Notch space */
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .title {
+            font-size: 28px;
+            font-weight: 600;
+            letter-spacing: -0.7px;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .icon-button {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background-color: var(--button-bg);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.2s;
+        }
+
+        .icon-button:hover {
+            background-color: #D8DBD6;
+        }
+
+        .avatar-group {
+            display: flex;
+            gap: 8px;
+        }
+
+        .avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 14px;
+            font-weight: 500;
+            border: 2px solid transparent;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .avatar:hover {
+            transform: scale(1.05);
+        }
+
+        .avatar-s {
+            background-color: #D98880; /* Soft Coral/Rose */
+            border-color: #D98880;
+            color: white; /* Ensure text is readable */
+        }
+
+        .avatar-r {
+            background-color: var(--blue-accent);
+            border-color: var(--blue-accent);
+        }
+
+        .avatar.selected {
+            box-shadow: 0 0 0 2px var(--bg-color), 0 0 0 4px var(--text-dark);
+        }
+
+        .date-text {
+            font-size: 15px;
+            color: var(--text-light);
+            margin-bottom: 24px;
+        }
+
+        /* Dose Cards */
+        .section-title {
+            font-size: 17px;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+
+        .cards-container {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 16px;
+            padding: 21px;
+            border: 1px solid #E3E3E8;
+            box-shadow: var(--shadow);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-hover);
+        }
+
+        .card-given {
+            background-color: var(--green-light);
+            border-color: var(--green-border);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+        }
+
+        .dose-name {
+            font-size: 17px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .dose-time {
+            font-size: 13px;
+            color: var(--text-light);
+        }
+
+        .card-avatars {
+            display: flex;
+            gap: 6px;
+        }
+
+        .small-avatar {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 11px;
+            font-weight: 500;
+            opacity: 0.3;
+        }
+
+        .small-avatar.active {
+            opacity: 1;
+        }
+
+        .log-button {
+            width: 100%;
+            height: 46.5px;
+            border-radius: 16px;
+            background-color: var(--green-accent);
+            border: none;
+            font-size: 15px;
+            font-weight: 600;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.2s, color 0.2s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .log-button:hover:not(:disabled) {
+            background-color: #6B876C;
+            color: white;
+        }
+
+        .log-button:disabled {
+            cursor: not-allowed;
+            background-color: var(--button-bg);
+            color: var(--text-light);
+            box-shadow: none;
+        }
+
+        .card-given .log-button {
+            background-color: rgba(124, 154, 125, 0.1);
+            color: var(--green-accent);
+            border: 1px solid var(--green-border);
+            box-shadow: none;
+        }
+
+        /* Inventory */
+        .inventory-container {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .inventory-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+
+        .med-name {
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+
+        .med-subtext {
+            font-size: 13px;
+            color: var(--text-light);
+        }
+
+        .days-left {
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .progress-bar-bg {
+            height: 10px;
+            background-color: #E8EBE6;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            border-radius: 5px;
+            background-color: var(--green-accent);
+            transition: width 0.3s ease, background-color 0.3s ease;
+        }
+
+        .progress-bar-fill.warning {
+            background-color: var(--alert-amber);
+        }
+
+        .progress-bar-fill.critical {
+            background-color: var(--alert-red);
+        }
+
+        /* User Toggle UI for Demo */
+        .user-toggle-demo {
+            margin-top: 20px;
+            padding: 16px;
+            background: rgba(255,255,255,0.8);
+            border-radius: 12px;
+            font-size: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            border: 1px dashed var(--text-light);
+        }
+
+        /* Custom scrollbar for premium feel */
+        .scroll-content::-webkit-scrollbar {
+            width: 4px;
+        }
+        .scroll-content::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .scroll-content::-webkit-scrollbar-thumb {
+            background: rgba(0,0,0,0.1);
+            border-radius: 2px;
+        }
+
+        /* Settings Modal */
+        .settings-modal {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #F9F9F7;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            padding: 24px;
+            padding-top: 48px;
+            transform: translateY(100%);
+            transition: transform 0.3s ease-in-out;
+        }
+
+        .settings-modal.open {
+            transform: translateY(0);
+        }
+
+        .settings-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 32px;
+        }
+
+        .settings-title {
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .settings-content {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .settings-section {
+            background-color: #FFFFFF;
+            border-radius: 16px;
+            padding: 21px;
+            border: 1px solid #E3E3E8;
+            box-shadow: var(--shadow);
+        }
+
+        .section-heading {
+            font-size: 17px;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+
+        .input-group {
+            margin-bottom: 16px;
+        }
+
+        .input-label {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-light);
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .number-input {
+            width: 100%;
+            height: 50px;
+            background-color: #E8EBE6;
+            border: 1px solid #E3E3E8;
+            border-radius: 16px;
+            padding: 12px 16px;
+            font-size: 16px;
+            color: var(--text-dark);
+            font-family: inherit;
+        }
+
+        .input-subtext {
+            font-size: 12px;
+            color: var(--text-light);
+            margin-top: 4px;
+        }
+
+        .refill-row {
+            display: flex;
+            gap: 8px;
+        }
+
+        .refill-input {
+            flex: 1;
+        }
+
+        .add-button {
+            width: 95px;
+            height: 50px;
+            background-color: var(--green-accent);
+            border-radius: 16px;
+            border: none;
+            color: white;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .add-button:hover {
+            background-color: #6B876C;
+        }
+        @media (max-width: 500px) {
+            body {
+                align-items: flex-start;
+                background-color: var(--bg-color);
+            }
+            .mobile-container {
+                max-width: 100%;
+                height: 100vh;
+                border-radius: 0;
+                border: none;
+                box-shadow: none;
+            }
+            .scroll-content {
+                padding-top: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="mobile-container">
+        <div class="scroll-content">
+            <!-- Header -->
+            <div class="header">
+                <h1 class="title" id="app-title">Kulfi Meds</h1>
+                <div class="header-right">
+                    <button class="icon-button" aria-label="Settings" onclick="toggleSettings(true)">⚙️</button>
+                    <div class="avatar-group">
+                        <div class="avatar avatar-s selected" id="user-avatar-s" onclick="selectUser('Shibani')">S</div>
+                        <div class="avatar avatar-r" id="user-avatar-r" onclick="selectUser('Raju')">R</div>
+                    </div>
+                </div>
+            </div>
+
+            <p class="date-text" id="current-date">Today, April 9</p>
+
+            <!-- Dose Cards -->
+            <div class="cards-container">
+                <!-- Morning Dose -->
+                <div class="card card-given" id="morning-card">
+                    <div class="card-header">
+                        <div>
+                            <div class="dose-name">Morning Dose</div>
+                            <div class="dose-time">8:00 AM</div>
+                        </div>
+                        <div class="card-avatars">
+                            <div class="small-avatar avatar-s active">S</div>
+                            <div class="small-avatar avatar-r">R</div>
+                        </div>
+                    </div>
+                    <button class="log-button" disabled id="morning-btn">
+                        <span>✓</span> Logged
+                    </button>
+                </div>
+
+                <!-- Evening Dose -->
+                <div class="card" id="evening-card">
+                    <div class="card-header">
+                        <div>
+                            <div class="dose-name">Evening Dose</div>
+                            <div class="dose-time">8:00 PM</div>
+                        </div>
+                        <div class="card-avatars">
+                            <div class="small-avatar avatar-s" id="evening-avatar-s">S</div>
+                            <div class="small-avatar avatar-r" id="evening-avatar-r">R</div>
+                        </div>
+                    </div>
+                    <button class="log-button" id="evening-btn" onclick="logDose('evening')">
+                        Log as Given
+                    </button>
+                </div>
+            </div>
+
+            <!-- Inventory Section -->
+            <div class="inventory-section">
+                <h2 class="section-title">Inventory</h2>
+                
+                <div class="inventory-container">
+                    <!-- Phenobarbital -->
+                    <div class="card">
+                        <div class="inventory-header">
+                            <div>
+                                <div class="med-name">Phenobarbital</div>
+                                <div class="med-subtext">2 Pills/Dose</div>
+                            </div>
+                            <div class="days-left" id="pheno-days">30 days left</div>
+                        </div>
+                        <div class="progress-bar-bg">
+                            <div class="progress-bar-fill" id="pheno-progress" style="width: 100%"></div>
+                        </div>
+                    </div>
+
+                    <!-- Keppra -->
+                    <div class="card">
+                        <div class="inventory-header">
+                            <div>
+                                <div class="med-name">Keppra</div>
+                                <div class="med-subtext">1 Pill/Dose</div>
+                            </div>
+                            <div class="days-left" id="keppra-days">30 days left</div>
+                        </div>
+                        <div class="progress-bar-bg">
+                            <div class="progress-bar-fill" id="keppra-progress" style="width: 100%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Demo Helper -->
+            <div class="user-toggle-demo" style="margin-top: 20px; padding: 16px; background: rgba(0,0,0,0.02); border-radius: 12px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 14px;">
+                    <span>Current User: <strong id="current-user-display">Shibani</strong></span>
+                    <span style="color: var(--text-light)">Click avatars above to switch</span>
+                </div>
+                
+                <div style="display: flex; flex-direction: row; gap: 8px; margin-top: 12px;">
+                    <button id="open-sync-tab" onclick="openSyncTab()" style="flex: 1; padding: 10px; background: #FFFFFF; color: #2C2C2E; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500; text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">Open Sync Tab</button>
+                    <button id="reset-state" onclick="resetState()" style="flex: 1; padding: 10px; background: #FFFFFF; color: #2C2C2E; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500; text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">Reset State</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Modal -->
+        <div class="settings-modal" id="settings-modal">
+            <div class="settings-header">
+                <h2 class="settings-title">Settings</h2>
+                <button class="icon-button" onclick="toggleSettings(false)" aria-label="Close settings">✕</button>
+            </div>
+
+            <div class="settings-content">
+                <!-- Phenobarbital Settings -->
+                <div class="settings-section">
+                    <h3 class="section-heading">Phenobarbital</h3>
+                    
+                    <div class="input-group">
+                        <label class="input-label">Current Pill Count</label>
+                        <input type="number" class="number-input" id="pheno-count-input" value="120" onchange="updatePillCount('pheno', this.value)">
+                        <p class="input-subtext" id="pheno-supply-text">30 days supply (2 pills per dose, 2x daily)</p>
+                    </div>
+
+                    <div>
+                        <label class="input-label">Add Refill</label>
+                        <div class="refill-row">
+                            <input type="number" class="number-input refill-input" id="pheno-refill-input" placeholder="Number of pills">
+                            <button class="add-button" onclick="addRefill('pheno')">Add</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Keppra Settings -->
+                <div class="settings-section">
+                    <h3 class="section-heading">Keppra</h3>
+                    
+                    <div class="input-group">
+                        <label class="input-label">Current Pill Count</label>
+                        <input type="number" class="number-input" id="keppra-count-input" value="60" onchange="updatePillCount('keppra', this.value)">
+                        <p class="input-subtext" id="keppra-supply-text">30 days supply (1 pill per dose, 2x daily)</p>
+                    </div>
+
+                    <div>
+                        <label class="input-label">Add Refill</label>
+                        <div class="refill-row">
+                            <input type="number" class="number-input refill-input" id="keppra-refill-input" placeholder="Number of pills">
+                            <button class="add-button" onclick="addRefill('keppra')">Add</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global Error Handler for debugging
+        window.onerror = function(msg, url, line, col, error) {
+            alert("Global Error: " + msg + "\nLine: " + line + "\nCol: " + col);
+            return false;
+        };
+
+        // 0. Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyBA5pqor7BukcarYbvJGpKR1naBDZLR86g",
+            authDomain: "shibani-mayer-experiment.firebaseapp.com",
+            projectId: "shibani-mayer-experiment",
+            storageBucket: "shibani-mayer-experiment.firebasestorage.app",
+            messagingSenderId: "93611777647",
+            appId: "1:93611777647:web:668357a1858b1e9871b79a",
+            measurementId: "G-KWFXB2H12J"
+        };
+        
+        // Initialize Firebase if loaded
+        if (typeof firebase !== 'undefined') {
+            firebase.initializeApp(firebaseConfig);
+            firebase.firestore().settings({ experimentalForceLongPolling: true });
+        }
+
+        // 1. State Management
+        let state = {
+            userCurrent: 'Shibani',
+            phenoPills: null,
+            keppraPills: null,
+            initialPheno: 120,
+            initialKeppra: 60,
+            doses: {
+                morning: { given: false, givenBy: null, time: '08:00' },
+                evening: { given: false, givenBy: null, time: '20:00' }
+            }
+        };
+
+        const DOC_ID = "shared_meds_state";
+        const PHENO_THRESHOLD = 40;
+        const KEPPRA_THRESHOLD = 20;
+
+        // Initialize from LocalStorage or defaults
+        function loadState() {
+            try {
+                const saved = localStorage.getItem(DOC_ID);
+                if (saved) {
+                    const data = JSON.parse(saved);
+                    
+                    // Auto-reset check for new day
+                    const today = new Date().toDateString();
+                    if (data.lastResetDate && data.lastResetDate !== today) {
+                        resetDosesOnly();
+                        return;
+                    }
+                    
+                    state.doses.morning.given = data.isMorningDoseTaken;
+                    state.doses.morning.givenBy = data.morningGivenBy;
+                    state.doses.evening.given = data.isEveningDoseTaken;
+                    state.doses.evening.givenBy = data.eveningGivenBy;
+                    
+                    state.phenoPills = data.currentInventory?.pheno || 120;
+                    state.keppraPills = data.currentInventory?.keppra || 60;
+                    
+                    state.initialPheno = data.initialInventory?.pheno || 120;
+                    state.initialKeppra = data.initialInventory?.keppra || 60;
+                } else {
+                    initializeDB();
+                }
+                renderUI();
+            } catch (error) {
+                console.error("Error in loadState: ", error);
+                alert("Error in loadState: " + error.message);
+            }
+        }
+
+        function initializeDB() {
+            try {
+                const initialData = {
+                    isMorningDoseTaken: false,
+                    morningGivenBy: null,
+                    isEveningDoseTaken: false,
+                    eveningGivenBy: null,
+                    currentInventory: { pheno: 120, keppra: 60 },
+                    initialInventory: { pheno: 120, keppra: 60 },
+                    lastResetDate: new Date().toDateString()
+                };
+                localStorage.setItem(DOC_ID, JSON.stringify(initialData));
+                
+                // Load it
+                state.phenoPills = 120;
+                state.keppraPills = 60;
+                state.initialPheno = 120;
+                state.initialKeppra = 60;
+                state.doses.morning.given = false;
+                state.doses.evening.given = false;
+            } catch (error) {
+                console.error("Error in initializeDB: ", error);
+                alert("Error in initializeDB: " + error.message);
+            }
+        }
+
+        let childWindow = null;
+
+        function openSyncTab() {
+            childWindow = window.open(window.location.href, '_blank');
+        }
+
+        function resetState() {
+            // Now only resets doses, preserving inventory!
+            resetDosesOnly();
+        }
+
+        function resetDosesOnly() {
+            const current = JSON.parse(localStorage.getItem(DOC_ID)) || {};
+            current.isMorningDoseTaken = false;
+            current.morningGivenBy = null;
+            current.isEveningDoseTaken = false;
+            current.eveningGivenBy = null;
+            current.lastResetDate = new Date().toDateString();
+            
+            localStorage.setItem(DOC_ID, JSON.stringify(current));
+            
+            if (typeof firebase !== 'undefined' && firebase.apps.length > 0) {
+                const db = firebase.firestore();
+                db.collection("meds_tracking").doc(DOC_ID).update({
+                    isMorningDoseTaken: false,
+                    morningGivenBy: null,
+                    isEveningDoseTaken: false,
+                    eveningGivenBy: null,
+                    lastResetDate: current.lastResetDate
+                }).catch(e => console.error("Error in resetDosesOnly Firestore: ", e));
+            }
+            
+            loadState();
+        }
+
+        function updateDB(updateData) {
+            const current = JSON.parse(localStorage.getItem(DOC_ID)) || {};
+            
+            // Merge updates
+            if (updateData.isMorningDoseTaken !== undefined) current.isMorningDoseTaken = updateData.isMorningDoseTaken;
+            if (updateData.morningGivenBy !== undefined) current.morningGivenBy = updateData.morningGivenBy;
+            if (updateData.isEveningDoseTaken !== undefined) current.isEveningDoseTaken = updateData.isEveningDoseTaken;
+            if (updateData.eveningGivenBy !== undefined) current.eveningGivenBy = updateData.eveningGivenBy;
+            
+            if (updateData.currentInventory) {
+                current.currentInventory = { ...current.currentInventory, ...updateData.currentInventory };
+            }
+            if (updateData.initialInventory) {
+                current.initialInventory = { ...current.initialInventory, ...updateData.initialInventory };
+            }
+            
+            for (const key in updateData) {
+                if (key.startsWith('currentInventory.')) {
+                    const med = key.split('.')[1];
+                    if (!current.currentInventory) current.currentInventory = {};
+                    current.currentInventory[med] = updateData[key];
+                }
+                if (key.startsWith('initialInventory.')) {
+                    const med = key.split('.')[1];
+                    if (!current.initialInventory) current.initialInventory = {};
+                    current.initialInventory[med] = updateData[key];
+                }
+            }
+
+            localStorage.setItem(DOC_ID, JSON.stringify(current));
+            
+            // Trigger event for current window too
+            loadState();
+
+            // Send message to other tabs if connected
+            const stateMsg = {
+                type: 'MEDS_STATE',
+                state: {
+                    doses: state.doses,
+                    phenoPills: state.phenoPills,
+                    keppraPills: state.keppraPills,
+                    initialPheno: state.initialPheno,
+                    initialKeppra: state.initialKeppra
+                }
+            };
+            if (childWindow) childWindow.postMessage(stateMsg, '*');
+            if (window.opener) window.opener.postMessage(stateMsg, '*');
+
+            // Write to Firestore if available
+            if (typeof firebase !== 'undefined' && firebase.apps.length > 0) {
+                const db = firebase.firestore();
+                db.collection("meds_tracking").doc(DOC_ID).set(current, { merge: true })
+                    .then(() => console.log("Firestore updated!"))
+                    .catch((error) => console.error("Firestore error: ", error));
+            }
+        }
+
+        // Listen for changes in other tabs (Storage event)
+        window.addEventListener('storage', (e) => {
+            if (e.key === DOC_ID) {
+                loadState();
+            }
+        });
+
+        // Listen for direct messages (Fallback for file://)
+        window.addEventListener('message', (e) => {
+            if (e.data && e.data.type === 'MEDS_STATE') {
+                console.log("Received direct message state!");
+                const data = e.data.state;
+                state.doses.morning.given = data.doses.morning.given;
+                state.doses.evening.given = data.doses.evening.given;
+                state.phenoPills = data.phenoPills;
+                state.keppraPills = data.keppraPills;
+                state.initialPheno = data.initialPheno;
+                state.initialKeppra = data.initialKeppra;
+                
+                renderUI();
+                
+                // Save to local storage too
+                localStorage.setItem(DOC_ID, JSON.stringify({
+                    isMorningDoseTaken: state.doses.morning.given,
+                    isEveningDoseTaken: state.doses.evening.given,
+                    currentInventory: { pheno: state.phenoPills, keppra: state.keppraPills },
+                    initialInventory: { pheno: state.initialPheno, keppra: state.initialKeppra }
+                }));
+            }
+        });
+
+        // Listen for Firestore changes (Cross-device sync)
+        if (typeof firebase !== 'undefined' && firebase.apps.length > 0) {
+            const db = firebase.firestore();
+            db.collection("meds_tracking").doc(DOC_ID)
+                .onSnapshot((doc) => {
+                    if (doc.exists) {
+                        console.log("Received Firestore update!");
+                        const data = doc.data();
+                        
+                        // Update LocalStorage so it persists on refresh!
+                        localStorage.setItem(DOC_ID, JSON.stringify(data));
+                        
+                        // Reload state to update UI
+                        loadState();
+                    }
+                });
+        }
+
+        // Polling fallback for file:// protocol
+        setInterval(() => {
+            loadState();
+        }, 1000);
+
+        // Initial load
+        loadState();
+
+        // Bind events (safer than inline onclick for strict environments)
+        document.getElementById('morning-btn').addEventListener('click', () => logDose('morning'));
+        document.getElementById('evening-btn').addEventListener('click', () => logDose('evening'));
+
+
+
+        // 2. Interactive Logic
+        function selectUser(user) {
+            state.userCurrent = user;
+            
+            // Update UI for avatars
+            document.getElementById('user-avatar-s').classList.toggle('selected', user === 'Shibani');
+            document.getElementById('user-avatar-r').classList.toggle('selected', user === 'Raju');
+            document.getElementById('current-user-display').innerText = user;
+        }
+
+        function logDose(doseKey) {
+            try {
+                if (state.doses[doseKey].given) {
+                    return;
+                }
+
+                const updateData = {};
+                if (doseKey === 'morning') {
+                    updateData.isMorningDoseTaken = true;
+                    updateData.morningGivenBy = state.userCurrent;
+                } else {
+                    updateData.isEveningDoseTaken = true;
+                    updateData.eveningGivenBy = state.userCurrent;
+                }
+
+                updateData.currentInventory = {
+                    pheno: Math.max(0, state.phenoPills - 2),
+                    keppra: Math.max(0, state.keppraPills - 1)
+                };
+
+                updateDB(updateData);
+            } catch (error) {
+                console.error("Error in logDose: ", error);
+                alert("Error in logDose: " + error.message);
+            }
+        }
+
+        function renderUI() {
+            updateCardUI('morning');
+            updateCardUI('evening');
+            updateInventory();
+            updateSupplyTexts();
+        }
+
+        function updateCardUI(doseKey) {
+            const card = document.getElementById(`${doseKey}-card`);
+            const btn = document.getElementById(`${doseKey}-btn`);
+            
+            if (!card || !btn) {
+                console.warn(`Elements not found for ${doseKey}`);
+                return;
+            }
+
+            const avatars = card.querySelectorAll('.card-avatars .small-avatar');
+            const avatarS = avatars[0];
+            const avatarR = avatars[1];
+
+            const dose = state.doses[doseKey];
+
+            if (dose.given) {
+                card.classList.add('card-given');
+                const fullName = dose.givenBy === 'Shibani' ? 'Shibani' : 'Raju';
+                btn.innerHTML = `<span>✓</span> Logged by ${fullName}`;
+                btn.disabled = true;
+
+                if (dose.givenBy === 'Shibani') {
+                    if (avatarS) avatarS.classList.add('active');
+                    if (avatarR) avatarR.classList.remove('active');
+                } else {
+                    if (avatarR) avatarR.classList.add('active');
+                    if (avatarS) avatarS.classList.remove('active');
+                }
+            } else {
+                card.classList.remove('card-given');
+                btn.innerHTML = `Log as Given`;
+                btn.disabled = false;
+                if (avatarS) avatarS.classList.remove('active');
+                if (avatarR) avatarR.classList.remove('active');
+            }
+        }
+
+        function updateInventory() {
+            if (state.phenoPills === null || state.keppraPills === null) {
+                document.getElementById('pheno-days').innerText = `Loading...`;
+                document.getElementById('keppra-days').innerText = `Loading...`;
+                return;
+            }
+
+            // Pheno
+            const phenoPct = (state.phenoPills / state.initialPheno) * 100;
+            const phenoDays = Math.floor(state.phenoPills / 4); // 2 doses * 2 pills
+            
+            const phenoFill = document.getElementById('pheno-progress');
+            phenoFill.style.width = `${phenoPct}%`;
+            document.getElementById('pheno-days').innerText = `${phenoDays} days left`;
+
+            // Warning trigger
+            if (state.phenoPills <= PHENO_THRESHOLD) {
+                phenoFill.classList.add('warning');
+            }
+            if (state.phenoPills <= 10) { // Extra critical level just for visuals
+                phenoFill.classList.remove('warning');
+                phenoFill.classList.add('critical');
+            }
+
+            // Keppra
+            const keppraPct = (state.keppraPills / state.initialKeppra) * 100;
+            const keppraDays = Math.floor(state.keppraPills / 2); // 2 doses * 1 pill
+            
+            const keppraFill = document.getElementById('keppra-progress');
+            keppraFill.style.width = `${keppraPct}%`;
+            document.getElementById('keppra-days').innerText = `${keppraDays} days left`;
+
+            // Warning trigger
+            if (state.keppraPills <= KEPPRA_THRESHOLD) {
+                keppraFill.classList.add('warning');
+            }
+            if (state.keppraPills <= 5) {
+                keppraFill.classList.remove('warning');
+                keppraFill.classList.add('critical');
+            }
+        }
+
+        // Settings Logic
+        function toggleSettings(open) {
+            const modal = document.getElementById('settings-modal');
+            modal.classList.toggle('open', open);
+            
+            if (open) {
+                // Update inputs with current state
+                document.getElementById('pheno-count-input').value = state.phenoPills;
+                document.getElementById('keppra-count-input').value = state.keppraPills;
+                updateSupplyTexts();
+            }
+        }
+
+        function updatePillCount(med, value) {
+            const numValue = parseInt(value, 10);
+            if (isNaN(numValue)) return;
+
+            const updateData = {};
+            updateData[`currentInventory.${med}`] = numValue;
+
+            updateDB(updateData);
+        }
+
+        function addRefill(med) {
+            const input = document.getElementById(`${med}-refill-input`);
+            const value = parseInt(input.value, 10);
+            if (isNaN(value) || value <= 0) return;
+
+            // Optimistic Update: Update local state and UI immediately
+            if (med === 'pheno') {
+                state.phenoPills += value;
+                state.initialPheno = state.phenoPills;
+            } else if (med === 'keppra') {
+                state.keppraPills += value;
+                state.initialKeppra = state.keppraPills;
+            }
+
+            updateInventory();
+            updateSupplyTexts();
+            input.value = '';
+
+            // Update Database in background
+            const updateData = {};
+            updateData[`currentInventory.${med}`] = state[med === 'pheno' ? 'phenoPills' : 'keppraPills'];
+            updateData[`initialInventory.${med}`] = state[med === 'pheno' ? 'initialPheno' : 'initialKeppra'];
+
+            updateDB(updateData);
+        }
+
+        function updateSupplyTexts() {
+            const phenoDays = Math.floor(state.phenoPills / 4);
+            const keppraDays = Math.floor(state.keppraPills / 2);
+            
+            document.getElementById('pheno-supply-text').innerText = `${phenoDays} days supply (2 pills per dose, 2x daily)`;
+            document.getElementById('keppra-supply-text').innerText = `${keppraDays} days supply (1 pill per dose, 2x daily)`;
+
+            // Also update the input values to keep them in sync, but only if user is not typing!
+            const phenoInput = document.getElementById('pheno-count-input');
+            const keppraInput = document.getElementById('keppra-count-input');
+            
+            if (document.activeElement !== phenoInput) {
+                phenoInput.value = state.phenoPills;
+            }
+            if (document.activeElement !== keppraInput) {
+                keppraInput.value = state.keppraPills;
+            }
+        }
+
+        // Set initial date dynamically
+        const dateOptions = { weekday: 'long', month: 'long', day: 'numeric' };
+        document.getElementById('current-date').innerText = new Date().toLocaleDateString('en-US', dateOptions);
+
+        // Initialize inventory bars
+        updateInventory();
+    </script>
+</body>
+</html>
