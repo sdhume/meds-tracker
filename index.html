@@ -477,6 +477,7 @@
             <div class="header">
                 <h1 class="title" id="app-title">Kulfi Meds</h1>
                 <div class="header-right">
+                    <button class="icon-button" aria-label="Logs" onclick="toggleLogsModal(true)">📋</button>
                     <button class="icon-button" aria-label="Settings" onclick="toggleSettings(true)">⚙️</button>
                     <div class="avatar-group">
                         <div class="avatar avatar-s selected" id="user-avatar-s" onclick="selectUser('Shibani')">S</div>
@@ -486,6 +487,7 @@
             </div>
 
             <p class="date-text" id="current-date">Today, April 9</p>
+            <p style="font-size: 14px; color: var(--text-light); margin-top: 4px; margin-bottom: 16px;">Logged in as: <strong id="current-user-display">Shibani</strong></p>
 
             <!-- Dose Cards -->
             <div class="cards-container">
@@ -559,18 +561,9 @@
                 </div>
             </div>
 
-            <!-- Demo Helper -->
-            <div class="user-toggle-demo" style="margin-top: 20px; padding: 16px; background: rgba(0,0,0,0.02); border-radius: 12px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 14px;">
-                    <span>Current User: <strong id="current-user-display">Shibani</strong></span>
-                    <span style="color: var(--text-light)">Click avatars above to switch</span>
-                </div>
-                
-                <div style="display: flex; flex-direction: row; gap: 8px; margin-top: 12px;">
-                    <button id="open-sync-tab" onclick="openSyncTab()" style="flex: 1; padding: 10px; background: #FFFFFF; color: #2C2C2E; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500; text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">Open Sync Tab</button>
-                    <button id="reset-state" onclick="resetState()" style="flex: 1; padding: 10px; background: #FFFFFF; color: #2C2C2E; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500; text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">Reset State</button>
-                </div>
-            </div>
+
+
+
         </div>
 
         <!-- Settings Modal -->
@@ -620,6 +613,21 @@
                 </div>
             </div>
         </div>
+
+        <!-- Logs Modal -->
+        <div class="settings-modal" id="logs-modal">
+            <div class="settings-header">
+                <h2 class="settings-title">Log History</h2>
+                <button class="icon-button" onclick="toggleLogsModal(false)" aria-label="Close logs">✕</button>
+            </div>
+
+            <div class="settings-content" style="padding: 16px;">
+                <button onclick="clearLogs()" style="width: 100%; padding: 10px; background: #FF3B30; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500; margin-bottom: 16px;">Clear Logs</button>
+                <ul id="logs-list-modal" style="list-style: none; padding: 0; margin: 0;">
+                    <li style="color: var(--text-light); text-align: center; font-size: 14px;">No logs yet</li>
+                </ul>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -656,7 +664,8 @@
             doses: {
                 morning: { given: false, givenBy: null, time: '08:00' },
                 evening: { given: false, givenBy: null, time: '20:00' }
-            }
+            },
+            logs: []
         };
 
         const DOC_ID = "shared_meds_state";
@@ -687,6 +696,8 @@
                     
                     state.initialPheno = data.initialInventory?.pheno || 120;
                     state.initialKeppra = data.initialInventory?.keppra || 60;
+                    
+                    state.logs = data.logs || [];
                 } else {
                     initializeDB();
                 }
@@ -709,6 +720,13 @@
                     lastResetDate: new Date().toDateString()
                 };
                 localStorage.setItem(DOC_ID, JSON.stringify(initialData));
+                
+                // Write to Firestore if available to ensure document exists
+                if (typeof firebase !== 'undefined' && firebase.apps.length > 0) {
+                    const db = firebase.firestore();
+                    db.collection("meds_tracking").doc(DOC_ID).set(initialData, { merge: true })
+                        .catch(e => console.error("Error in initializeDB Firestore: ", e));
+                }
                 
                 // Load it
                 state.phenoPills = 120;
@@ -742,6 +760,18 @@
             current.eveningGivenBy = null;
             current.lastResetDate = new Date().toDateString();
             
+            // Add to logs
+            const logEntry = {
+                date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+                user: 'System',
+                dose: 'System Reset'
+            };
+            
+            const saved = localStorage.getItem(DOC_ID);
+            const currentLogs = saved ? (JSON.parse(saved).logs || []) : [];
+            current.logs = [logEntry, ...currentLogs].slice(0, 20);
+            
             localStorage.setItem(DOC_ID, JSON.stringify(current));
             
             if (typeof firebase !== 'undefined' && firebase.apps.length > 0) {
@@ -751,7 +781,8 @@
                     morningGivenBy: null,
                     isEveningDoseTaken: false,
                     eveningGivenBy: null,
-                    lastResetDate: current.lastResetDate
+                    lastResetDate: current.lastResetDate,
+                    logs: current.logs
                 }).catch(e => console.error("Error in resetDosesOnly Firestore: ", e));
             }
             
@@ -766,6 +797,7 @@
             if (updateData.morningGivenBy !== undefined) current.morningGivenBy = updateData.morningGivenBy;
             if (updateData.isEveningDoseTaken !== undefined) current.isEveningDoseTaken = updateData.isEveningDoseTaken;
             if (updateData.eveningGivenBy !== undefined) current.eveningGivenBy = updateData.eveningGivenBy;
+            if (updateData.logs !== undefined) current.logs = updateData.logs;
             
             if (updateData.currentInventory) {
                 current.currentInventory = { ...current.currentInventory, ...updateData.currentInventory };
@@ -809,7 +841,8 @@
             // Write to Firestore if available
             if (typeof firebase !== 'undefined' && firebase.apps.length > 0) {
                 const db = firebase.firestore();
-                db.collection("meds_tracking").doc(DOC_ID).set(current, { merge: true })
+                // Use update with updateData to prevent overwriting with stale state
+                db.collection("meds_tracking").doc(DOC_ID).update(updateData)
                     .then(() => console.log("Firestore updated!"))
                     .catch((error) => console.error("Firestore error: ", error));
             }
@@ -890,23 +923,50 @@
 
         function logDose(doseKey) {
             try {
-                if (state.doses[doseKey].given) {
-                    return;
-                }
-
+                const isLogged = state.doses[doseKey].given;
                 const updateData = {};
-                if (doseKey === 'morning') {
-                    updateData.isMorningDoseTaken = true;
-                    updateData.morningGivenBy = state.userCurrent;
+                
+                const logEntry = {
+                    date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                    time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+                    user: state.userCurrent,
+                    dose: doseKey === 'morning' ? 'Morning Dose' : 'Evening Dose'
+                };
+                
+                if (!isLogged) {
+                    // Log it
+                    if (doseKey === 'morning') {
+                        updateData.isMorningDoseTaken = true;
+                        updateData.morningGivenBy = state.userCurrent;
+                    } else {
+                        updateData.isEveningDoseTaken = true;
+                        updateData.eveningGivenBy = state.userCurrent;
+                    }
+                    updateData.currentInventory = {
+                        pheno: Math.max(0, state.phenoPills - 2),
+                        keppra: Math.max(0, state.keppraPills - 1)
+                    };
                 } else {
-                    updateData.isEveningDoseTaken = true;
-                    updateData.eveningGivenBy = state.userCurrent;
+                    // Unlog it
+                    if (doseKey === 'morning') {
+                        updateData.isMorningDoseTaken = false;
+                        updateData.morningGivenBy = null;
+                    } else {
+                        updateData.isEveningDoseTaken = false;
+                        updateData.eveningGivenBy = null;
+                    }
+                    updateData.currentInventory = {
+                        pheno: state.phenoPills + 2,
+                        keppra: state.keppraPills + 1
+                    };
+                    
+                    logEntry.dose = doseKey === 'morning' ? 'Morning Dose Undone' : 'Evening Dose Undone';
                 }
 
-                updateData.currentInventory = {
-                    pheno: Math.max(0, state.phenoPills - 2),
-                    keppra: Math.max(0, state.keppraPills - 1)
-                };
+                // Add to logs
+                const saved = localStorage.getItem(DOC_ID);
+                const currentLogs = saved ? (JSON.parse(saved).logs || []) : [];
+                updateData.logs = [logEntry, ...currentLogs].slice(0, 20);
 
                 updateDB(updateData);
             } catch (error) {
@@ -920,6 +980,32 @@
             updateCardUI('evening');
             updateInventory();
             updateSupplyTexts();
+            renderLogs();
+        }
+
+        function renderLogs() {
+            const list = document.getElementById('logs-list-modal');
+            if (!list) return;
+            
+            if (!state.logs || state.logs.length === 0) {
+                list.innerHTML = `<li style="color: var(--text-light); text-align: center; font-size: 14px;">No logs yet</li>`;
+                return;
+            }
+            
+            list.innerHTML = state.logs.map(log => `
+                <li style="padding: 10px 0; border-bottom: 1px solid #E3E3E8; display: flex; align-items: center; font-size: 14px;">
+                    <div style="width: 70px; color: var(--text-light);">${log.date}</div>
+                    <div style="flex: 1; font-weight: 500;">${log.dose}</div>
+                    <div style="color: var(--text-light);">
+                        ${log.time} by ${log.user}
+                    </div>
+                </li>
+            `).join('');
+            
+            // Remove border from last item
+            if (list.lastElementChild) {
+                list.lastElementChild.style.borderBottom = 'none';
+            }
         }
 
         function updateCardUI(doseKey) {
@@ -941,7 +1027,7 @@
                 card.classList.add('card-given');
                 const fullName = dose.givenBy === 'Shibani' ? 'Shibani' : 'Raju';
                 btn.innerHTML = `<span>✓</span> Logged by ${fullName}`;
-                btn.disabled = true;
+                btn.disabled = false;
 
                 if (dose.givenBy === 'Shibani') {
                     if (avatarS) avatarS.classList.add('active');
@@ -1011,6 +1097,39 @@
                 document.getElementById('pheno-count-input').value = state.phenoPills;
                 document.getElementById('keppra-count-input').value = state.keppraPills;
                 updateSupplyTexts();
+            }
+        }
+
+        function toggleLogsModal(open) {
+            const modal = document.getElementById('logs-modal');
+            modal.classList.toggle('open', open);
+            if (open) {
+                renderLogs();
+            }
+        }
+
+        function clearLogs() {
+            if (!confirm("Are you sure you want to clear all logs?")) return;
+            
+            state.logs = [];
+            
+            // Update LocalStorage
+            const current = JSON.parse(localStorage.getItem(DOC_ID)) || {};
+            current.logs = [];
+            localStorage.setItem(DOC_ID, JSON.stringify(current));
+            
+            // Update Firestore
+            if (typeof firebase !== 'undefined' && firebase.apps.length > 0) {
+                firebase.firestore().collection("meds_tracking").doc(DOC_ID).update({ logs: [] })
+                    .then(() => {
+                        renderLogs();
+                    })
+                    .catch(e => {
+                        console.error("Error clearing logs: ", e);
+                        alert("Error clearing logs: " + e.message);
+                    });
+            } else {
+                renderLogs();
             }
         }
 
