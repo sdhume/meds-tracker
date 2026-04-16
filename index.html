@@ -20,11 +20,9 @@
             --card-bg: #FFFFFF;
             --text-dark: #2C2C2E;
             --text-light: #8E8E93;
-            --green-accent: #7C9A7D;
-            --green-light: rgba(124, 154, 125, 0.05);
-            --green-border: rgba(124, 154, 125, 0.3);
-            --blue-accent: #8B9DC3;
-            --blue-light: rgba(139, 157, 195, 0.3);
+            --accent-color: #34C759;
+            --accent-light: rgba(52, 199, 89, 0.05);
+            --accent-border: rgba(52, 199, 89, 0.3);
             --button-bg: #E8EBE6;
             --alert-red: #FF3B30;
             --alert-amber: #FF9500;
@@ -133,14 +131,15 @@
         }
 
         .avatar-s {
-            background-color: #D98880; /* Soft Coral/Rose */
-            border-color: #D98880;
-            color: white; /* Ensure text is readable */
+            background-color: #FF2D55; /* Vibrant Pink */
+            border-color: #FF2D55;
+            color: white;
         }
 
         .avatar-r {
-            background-color: var(--blue-accent);
-            border-color: var(--blue-accent);
+            background-color: #3B82F6; /* Vibrant Blue */
+            border-color: #3B82F6;
+            color: white;
         }
 
         .avatar.selected {
@@ -148,9 +147,10 @@
         }
 
         .date-text {
-            font-size: 15px;
-            color: var(--text-light);
-            margin-bottom: 24px;
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 8px;
         }
 
         /* Dose Cards */
@@ -182,8 +182,8 @@
         }
 
         .card-given {
-            background-color: var(--green-light);
-            border-color: var(--green-border);
+            background-color: var(--accent-light);
+            border-color: var(--accent-border);
         }
 
         .card-header {
@@ -204,50 +204,31 @@
             color: var(--text-light);
         }
 
-        .card-avatars {
-            display: flex;
-            gap: 6px;
-        }
 
-        .small-avatar {
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            color: white;
-            font-size: 11px;
-            font-weight: 500;
-            opacity: 0.3;
-        }
-
-        .small-avatar.active {
-            opacity: 1;
-        }
 
         .log-button {
             width: 100%;
             height: 46.5px;
             border-radius: 16px;
-            background-color: var(--green-accent);
+            background: linear-gradient(135deg, #34C759 0%, #00D2C4 100%);
             border: none;
             font-size: 15px;
             font-weight: 600;
             color: white;
             cursor: pointer;
-            transition: background-color 0.2s, color 0.2s;
+            transition: transform 0.2s, box-shadow 0.2s;
             display: flex;
             justify-content: center;
             align-items: center;
             gap: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
-
-        .log-button:hover:not(:disabled) {
-            background-color: #6B876C;
-            color: white;
+        .log-button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(52, 199, 89, 0.3);
         }
+
+
 
         .log-button:disabled {
             cursor: not-allowed;
@@ -257,9 +238,9 @@
         }
 
         .card-given .log-button {
-            background-color: rgba(124, 154, 125, 0.1);
-            color: var(--green-accent);
-            border: 1px solid var(--green-border);
+            background: rgba(52, 199, 89, 0.1);
+            color: var(--accent-color);
+            border: 1px solid var(--accent-border);
             box-shadow: none;
         }
 
@@ -303,7 +284,7 @@
         .progress-bar-fill {
             height: 100%;
             border-radius: 5px;
-            background-color: var(--green-accent);
+            background-color: var(--accent-color);
             transition: width 0.3s ease, background-color 0.3s ease;
         }
 
@@ -435,13 +416,14 @@
         .add-button {
             width: 95px;
             height: 50px;
-            background-color: var(--green-accent);
+            background: linear-gradient(135deg, #34C759 0%, #00D2C4 100%);
             border-radius: 16px;
             border: none;
             color: white;
             font-size: 16px;
             font-weight: 500;
             cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -449,7 +431,8 @@
         }
 
         .add-button:hover {
-            background-color: #6B876C;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(52, 199, 89, 0.3);
         }
         @media (max-width: 500px) {
             body {
@@ -487,7 +470,7 @@
             </div>
 
             <p class="date-text" id="current-date">Today, April 9</p>
-            <p style="font-size: 14px; color: var(--text-light); margin-top: 4px; margin-bottom: 16px;">Logged in as: <strong id="current-user-display">Shibani</strong></p>
+            <p style="font-size: 14px; color: var(--text-light); margin-bottom: 16px;">Logged in as: <strong id="current-user-display">Shibani</strong></p>
 
             <!-- Dose Cards -->
             <div class="cards-container">
@@ -498,10 +481,7 @@
                             <div class="dose-name">Morning Dose</div>
                             <div class="dose-time">8:00 AM</div>
                         </div>
-                        <div class="card-avatars">
-                            <div class="small-avatar avatar-s active">S</div>
-                            <div class="small-avatar avatar-r">R</div>
-                        </div>
+
                     </div>
                     <button class="log-button" disabled id="morning-btn">
                         <span>✓</span> Logged
@@ -515,10 +495,7 @@
                             <div class="dose-name">Evening Dose</div>
                             <div class="dose-time">8:00 PM</div>
                         </div>
-                        <div class="card-avatars">
-                            <div class="small-avatar avatar-s" id="evening-avatar-s">S</div>
-                            <div class="small-avatar avatar-r" id="evening-avatar-r">R</div>
-                        </div>
+
                     </div>
                     <button class="log-button" id="evening-btn" onclick="logDose('evening')">
                         Log as Given
@@ -1017,9 +994,7 @@
                 return;
             }
 
-            const avatars = card.querySelectorAll('.card-avatars .small-avatar');
-            const avatarS = avatars[0];
-            const avatarR = avatars[1];
+
 
             const dose = state.doses[doseKey];
 
@@ -1029,19 +1004,12 @@
                 btn.innerHTML = `<span>✓</span> Logged by ${fullName}`;
                 btn.disabled = false;
 
-                if (dose.givenBy === 'Shibani') {
-                    if (avatarS) avatarS.classList.add('active');
-                    if (avatarR) avatarR.classList.remove('active');
-                } else {
-                    if (avatarR) avatarR.classList.add('active');
-                    if (avatarS) avatarS.classList.remove('active');
-                }
+
             } else {
                 card.classList.remove('card-given');
                 btn.innerHTML = `Log as Given`;
                 btn.disabled = false;
-                if (avatarS) avatarS.classList.remove('active');
-                if (avatarR) avatarR.classList.remove('active');
+
             }
         }
 
